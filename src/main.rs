@@ -38,8 +38,17 @@ async fn main() -> anyhow::Result<()> {
         let p_tx = p_tx.clone();
         let ref_match_re = ref_match_re.clone();
         tokio::spawn(async move {
-            if let Err(e) = update_project(client, pid, p_tx, ref_match_re).await {
-                log::error!("Error {}", e);
+            loop {
+                if let Err(e) = update_project(
+                    client.clone(),
+                    pid.clone(),
+                    p_tx.clone(),
+                    ref_match_re.clone(),
+                )
+                .await
+                {
+                    log::error!("Error {}", e);
+                }
             }
         });
     }
@@ -174,7 +183,7 @@ async fn update_project(
 
         p_tx.send(Pipelines {
             project: project.name.clone(),
-            pipelines: pipelines,
+            pipelines,
         })
         .await?;
 
