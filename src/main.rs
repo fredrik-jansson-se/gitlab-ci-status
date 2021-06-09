@@ -11,9 +11,9 @@ async fn main() -> anyhow::Result<()> {
 
     let _ = dotenv::dotenv();
 
-    let access_key = std::env::var("GITLAB_ACCESS_KEY").context("GITLAB_ACCESS_KEY")?;
-    let projects = std::env::var("PROJECTS")
-        .context("PROJECTS")?
+    let access_key = std::env::var("GITLAB_ACCESS_TOKEN").context("GITLAB_ACCESS_TOKEN")?;
+    let projects = std::env::var("PROJECT_IDS")
+        .context("PROJECT_IDS")?
         .split(",")
         .map(ToOwned::to_owned)
         .collect::<Vec<String>>();
