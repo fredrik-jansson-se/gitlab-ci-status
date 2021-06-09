@@ -12,3 +12,6 @@ PROJECT_IDS=1,2,3
 # Match ref against this regular expression
 MATCH_REF="master|(.*merge-requests.*)"
 ```
+
+## Running
+cargo run --release
