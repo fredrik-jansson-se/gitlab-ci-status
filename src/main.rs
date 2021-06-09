@@ -15,6 +15,7 @@ async fn main() -> anyhow::Result<()> {
     let projects = std::env::var("PROJECT_IDS")
         .context("PROJECT_IDS")?
         .split(",")
+        .map(|s| s.trim())
         .map(ToOwned::to_owned)
         .collect::<Vec<String>>();
 
