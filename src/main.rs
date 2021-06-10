@@ -62,12 +62,16 @@ async fn main() -> anyhow::Result<()> {
             *results = pipe.pipelines;
         }
         let mut table = comfy_table::Table::new();
-        table.set_header(vec!["Project", "Last updated", "URL", "Status"]);
+        table.set_header(vec!["Project", "Branch", "Last updated", "URL", "Status"]);
         for (name, results) in pipelines.iter() {
             for res in results {
                 table.add_row(comfy_table::Row::from(vec![
                     name.into(),
-                    res.updated_at.to_string().into(),
+                    (&res.reference).into(),
+                    res.updated_at
+                        .format("%Y-%m-%d %H:%M:%S")
+                        .to_string()
+                        .into(),
                     (&res.web_url).into(),
                     res.status.to_cell(),
                 ]));
