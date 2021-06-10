@@ -19,7 +19,7 @@ async fn main() -> anyhow::Result<()> {
         .map(ToOwned::to_owned)
         .collect::<Vec<String>>();
 
-    let ref_match = std::env::var("MATCH_REF").unwrap_or("master".to_string());
+    let ref_match = std::env::var("MATCH_REF").unwrap_or(".*".to_string());
     let ref_match_re = regex::Regex::new(&ref_match)?;
 
     let mut headers = reqwest::header::HeaderMap::new();
