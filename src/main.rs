@@ -31,7 +31,7 @@ async fn main() -> anyhow::Result<()> {
         .default_headers(headers)
         .build()?;
 
-    let (p_tx, mut p_rx) = tokio::sync::mpsc::channel(10);
+    let (p_tx, mut p_rx) = tokio::sync::mpsc::unbounded_channel();
 
     for pid in projects {
         let client = client.clone();
@@ -56,10 +56,10 @@ async fn main() -> anyhow::Result<()> {
     let mut pipelines = std::collections::HashMap::new();
     loop {
         let pipe = p_rx.recv().await;
-
         if let Some(pipe) = pipe {
             let results = pipelines.entry(pipe.project.clone()).or_insert(Vec::new());
             *results = pipe.pipelines;
+            log::info!("Updates from {}", pipe.project);
         }
         let mut table = comfy_table::Table::new();
         table.set_header(vec!["Project", "Branch", "Last updated", "URL", "Status"]);
@@ -157,7 +157,7 @@ struct Pipelines {
 async fn update_project(
     client: reqwest::Client,
     project_id: String,
-    p_tx: tokio::sync::mpsc::Sender<Pipelines>,
+    p_tx: tokio::sync::mpsc::UnboundedSender<Pipelines>,
     ref_match_re: regex::Regex,
 ) -> anyhow::Result<()> {
     log::debug!("update project {}", project_id);
@@ -177,19 +177,18 @@ async fn update_project(
         let pipelines = pipelines
             .into_iter()
             .filter(|p| ref_match_re.is_match(&p.reference))
-            .inspect(|pipe| log::info!("{:#?}", pipe))
+            .inspect(|pipe| log::debug!("{:#?}", pipe))
             .take(5)
             .collect();
 
         for pipe in &pipelines {
-            log::info!("{:#?}", pipe);
+            log::info!("Updating {} with {:#?}", project.name, pipe);
         }
 
         p_tx.send(Pipelines {
             project: project.name.clone(),
             pipelines,
-        })
-        .await?;
+        })?;
 
         tokio::time::sleep(std::time::Duration::from_secs(60)).await;
     }
