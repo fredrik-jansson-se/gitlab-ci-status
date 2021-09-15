@@ -7,6 +7,7 @@ use termion::{raw::IntoRawMode, screen::AlternateScreen};
 use tui::{backend::TermionBackend, Terminal};
 
 mod events;
+mod job_trace;
 mod jobs;
 mod pipelines;
 
@@ -14,7 +15,12 @@ const BASE_URL: &str = "https://www.gitlab.com/api/v4";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt::init();
+    let log_file = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open("logs.txt")?;
+    let log_file = std::sync::Arc::new(log_file);
+    tracing_subscriber::fmt::fmt().with_writer(log_file).init();
 
     let _ = dotenv::dotenv();
     let stdout = std::io::stdout().into_raw_mode()?;
@@ -39,7 +45,9 @@ async fn main() -> anyhow::Result<()> {
         .default_headers(headers)
         .build()?;
 
-    pipelines::run(&mut terminal, client, projects).await?;
+    if let Err(e) = pipelines::run(&mut terminal, client, projects).await {
+        tracing::error!(%e);
+    }
     Ok(())
 }
 

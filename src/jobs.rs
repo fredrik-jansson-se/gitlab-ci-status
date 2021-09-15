@@ -15,6 +15,9 @@ pub(crate) async fn run<B: Backend>(
 ) -> anyhow::Result<()> {
     let mut last_update = chrono::Local::now() - chrono::Duration::seconds(100);
     let mut jobs: Vec<GitlabJob> = Vec::new();
+    let mut table_state = TableState::default();
+    table_state.select(Some(0));
+
     loop {
         match key_rx.recv().await {
             None => return Ok(()),
@@ -22,6 +25,31 @@ pub(crate) async fn run<B: Backend>(
                 crate::events::Event::Tick => (),
                 crate::events::Event::Key(k) => match k {
                     termion::event::Key::Esc => return Ok(()),
+                    termion::event::Key::Down => {
+                        let mut cur_row = table_state.selected().unwrap_or(0);
+                        cur_row += 1;
+                        table_state.select(Some(cur_row));
+                    }
+                    termion::event::Key::Up => {
+                        let mut cur_row = table_state.selected().unwrap_or(0);
+                        if cur_row > 0 {
+                            cur_row -= 1;
+                            table_state.select(Some(cur_row));
+                        }
+                    }
+                    termion::event::Key::Char('\n') => match table_state.selected() {
+                        Some(row) if row < jobs.len() => {
+                            crate::job_trace::run(
+                                terminal,
+                                client,
+                                key_rx,
+                                project_id,
+                                jobs[row].id,
+                            )
+                            .await?;
+                        }
+                        _ => (),
+                    },
                     _ => (),
                 },
             },
@@ -47,6 +75,12 @@ pub(crate) async fn run<B: Backend>(
             // tracing::error!(?jobs);
         }
 
+        if let Some(row) = table_state.selected() {
+            if row >= jobs.len() && !jobs.is_empty() {
+                table_state.select(Some(jobs.len() - 1));
+            }
+        }
+
         terminal.draw(|f| {
             let rows = jobs.iter().map(|job| {
                 tui::widgets::Row::new(vec![
@@ -68,7 +102,7 @@ pub(crate) async fn run<B: Backend>(
                     Constraint::Percentage(50),
                 ])
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD));
-            f.render_widget(table, f.size());
+            f.render_stateful_widget(table, f.size(), &mut table_state);
         });
     }
 }
@@ -91,6 +125,7 @@ enum JobStatus {
     Skipped,
     Manual,
     Created,
+    Canceled,
 }
 
 impl std::fmt::Display for JobStatus {
@@ -103,6 +138,7 @@ impl std::fmt::Display for JobStatus {
             Self::Skipped => write!(f, "skipped"),
             Self::Manual => write!(f, "manual"),
             Self::Created => write!(f, "created"),
+            Self::Canceled => write!(f, "canceled"),
         }
     }
 }
