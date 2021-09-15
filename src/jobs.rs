@@ -90,6 +90,7 @@ enum JobStatus {
     Running,
     Skipped,
     Manual,
+    Created,
 }
 
 impl std::fmt::Display for JobStatus {
@@ -101,6 +102,7 @@ impl std::fmt::Display for JobStatus {
             Self::Running => write!(f, "running"),
             Self::Skipped => write!(f, "skipped"),
             Self::Manual => write!(f, "manual"),
+            Self::Created => write!(f, "created"),
         }
     }
 }
