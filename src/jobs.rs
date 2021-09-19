@@ -88,7 +88,7 @@ pub(crate) async fn run<B: Backend>(
                     "Last updated: {}",
                     last_update.format("%Y-%m-%d %H:%M:%S")
                 )))
-                .header(tui::widgets::Row::new(vec!["Name", "State", "URL"]))
+                .header(tui::widgets::Row::new(vec!["Name", "State", "Stage"]))
                 .widths(&[
                     Constraint::Percentage(30),
                     Constraint::Percentage(20),
