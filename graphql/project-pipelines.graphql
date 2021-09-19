@@ -1,0 +1,13 @@
+query ProjectPipelines($name: ID!) {
+  project(fullPath: $name) {
+    pipelines(first: 5) {
+      nodes {
+        id
+        iid
+        status
+        ref
+        path
+      }
+    }
+  }
+}

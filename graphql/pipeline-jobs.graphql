@@ -1,0 +1,28 @@
+fragment StageJobs on Pipeline {
+  stages {
+    nodes {
+      name
+      jobs {
+        nodes {
+          id
+          name
+          status
+        }
+      }
+    }
+  }
+}
+query PipelineJobs($project_name: ID!, $pipeline_id: ID!) {
+  project(fullPath: $project_name) {
+    id
+    pipeline(iid: $pipeline_id) {
+      downstream {
+        nodes {
+          ...StageJobs
+        }
+      }
+      ...StageJobs
+    }
+  }
+}
+

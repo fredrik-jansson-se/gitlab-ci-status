@@ -2,7 +2,7 @@ use tui::{
     backend::Backend,
     layout::Constraint,
     style::{Modifier, Style},
-    widgets::{Block, Cell, Table, TableState},
+    widgets::{Block, Table, TableState},
     Terminal,
 };
 
@@ -10,11 +10,11 @@ pub(crate) async fn run<B: Backend>(
     terminal: &mut Terminal<B>,
     client: &reqwest::Client,
     key_rx: &mut tokio::sync::mpsc::Receiver<crate::events::Event>,
-    project_id: &str,
-    pipeline_id: u64,
+    project_name: &str,
+    pipeline_id: &str,
 ) -> anyhow::Result<()> {
     let mut last_update = chrono::Local::now() - chrono::Duration::seconds(100);
-    let mut jobs: Vec<GitlabJob> = Vec::new();
+    let mut jobs: Vec<crate::graphql::JobInfo> = Vec::new();
     let mut table_state = TableState::default();
     table_state.select(Some(0));
 
@@ -30,6 +30,12 @@ pub(crate) async fn run<B: Backend>(
                         cur_row += 1;
                         table_state.select(Some(cur_row));
                     }
+
+                    termion::event::Key::PageDown => {
+                        let mut cur_row = table_state.selected().unwrap_or(0);
+                        cur_row += 10;
+                        table_state.select(Some(cur_row));
+                    }
                     termion::event::Key::Up => {
                         let mut cur_row = table_state.selected().unwrap_or(0);
                         if cur_row > 0 {
@@ -37,16 +43,16 @@ pub(crate) async fn run<B: Backend>(
                             table_state.select(Some(cur_row));
                         }
                     }
+                    termion::event::Key::PageUp => {
+                        let mut cur_row = table_state.selected().unwrap_or(0);
+                        if cur_row > 10 {
+                            cur_row -= 10;
+                            table_state.select(Some(cur_row));
+                        }
+                    }
                     termion::event::Key::Char('\n') => match table_state.selected() {
                         Some(row) if row < jobs.len() => {
-                            crate::job_trace::run(
-                                terminal,
-                                client,
-                                key_rx,
-                                project_id,
-                                jobs[row].id,
-                            )
-                            .await?;
+                            crate::job_trace::run(terminal, client, key_rx, &jobs[row]).await?;
                         }
                         _ => (),
                     },
@@ -57,22 +63,8 @@ pub(crate) async fn run<B: Backend>(
 
         if (chrono::Local::now() - last_update) > chrono::Duration::seconds(30) {
             last_update = chrono::Local::now();
-            let uri = format!(
-                "{}/projects/{}/pipelines/{}/jobs",
-                crate::BASE_URL,
-                project_id,
-                pipeline_id
-            );
-            let jobs_json: serde_json::Value = client.get(uri).send().await?.json().await?;
-            let f = std::fs::OpenOptions::new()
-                .write(true)
-                .create(true)
-                .open("jobs.json")?;
 
-            let _ = serde_json::to_writer_pretty(f, &jobs_json);
-            jobs = serde_json::from_value(jobs_json)?;
-            jobs.sort_by(|j1, j2| j1.id.cmp(&j2.id));
-            // tracing::error!(?jobs);
+            jobs = crate::graphql::pipeline_jobs(client, project_name, pipeline_id).await?;
         }
 
         if let Some(row) = table_state.selected() {
@@ -86,7 +78,8 @@ pub(crate) async fn run<B: Backend>(
                 tui::widgets::Row::new(vec![
                     tui::widgets::Cell::from(job.name.clone()),
                     (&job.status).into(),
-                    tui::widgets::Cell::from(job.web_url.clone()),
+                    tui::widgets::Cell::from(job.stage_name.clone()),
+                    // tui::widgets::Cell::from(job.web_url.clone()),
                 ])
             });
 
@@ -103,53 +96,42 @@ pub(crate) async fn run<B: Backend>(
                 ])
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD));
             f.render_stateful_widget(table, f.size(), &mut table_state);
-        });
+        })?;
     }
 }
 
-#[derive(Debug, serde::Deserialize)]
-struct GitlabJob {
-    name: String,
-    id: u64,
-    web_url: String,
-    status: JobStatus,
-}
+// #[derive(Debug, serde::Deserialize)]
+// struct GitlabJob {
+//     name: String,
+//     id: u64,
+//     web_url: String,
+//     status: JobStatus,
+// }
 
-#[derive(Clone, Debug, serde::Deserialize, PartialEq, Eq, Hash)]
-#[serde(rename_all(deserialize = "lowercase"))]
-enum JobStatus {
-    Active,
-    Success,
-    Failed,
-    Running,
-    Skipped,
-    Manual,
-    Created,
-    Canceled,
-}
+// #[derive(Clone, Debug, serde::Deserialize, PartialEq, Eq, Hash)]
+// #[serde(rename_all(deserialize = "lowercase"))]
+// enum JobStatus {
+//     Active,
+//     Success,
+//     Failed,
+//     Running,
+//     Skipped,
+//     Manual,
+//     Created,
+//     Canceled,
+// }
 
-impl std::fmt::Display for JobStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Active => write!(f, "active"),
-            Self::Success => write!(f, "success"),
-            Self::Failed => write!(f, "failed"),
-            Self::Running => write!(f, "running"),
-            Self::Skipped => write!(f, "skipped"),
-            Self::Manual => write!(f, "manual"),
-            Self::Created => write!(f, "created"),
-            Self::Canceled => write!(f, "canceled"),
-        }
-    }
-}
-
-impl<'a> From<&JobStatus> for Cell<'a> {
-    fn from(ps: &JobStatus) -> Cell<'a> {
-        let cell = Cell::from(ps.to_string());
-        match ps {
-            JobStatus::Success => cell.style(Style::default().fg(tui::style::Color::Green)),
-            JobStatus::Failed => cell.style(Style::default().fg(tui::style::Color::Red)),
-            _ => cell,
-        }
-    }
-}
+// impl std::fmt::Display for JobStatus {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         match self {
+//             Self::Active => write!(f, "active"),
+//             Self::Success => write!(f, "success"),
+//             Self::Failed => write!(f, "failed"),
+//             Self::Running => write!(f, "running"),
+//             Self::Skipped => write!(f, "skipped"),
+//             Self::Manual => write!(f, "manual"),
+//             Self::Created => write!(f, "created"),
+//             Self::Canceled => write!(f, "canceled"),
+//         }
+//     }
+// }

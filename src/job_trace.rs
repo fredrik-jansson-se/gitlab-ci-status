@@ -1,22 +1,32 @@
 use futures_util::StreamExt;
-use tui::{
-    backend::Backend,
-    layout::Constraint,
-    style::{Modifier, Style},
-    text::{Span, Spans},
-    widgets::{Block, Cell, Paragraph, Table, TableState},
-    Terminal,
-};
+use tui::{backend::Backend, Terminal};
 
 #[tracing::instrument(skip(terminal, client, key_rx))]
 pub(crate) async fn run<B: Backend>(
     terminal: &mut Terminal<B>,
     client: &reqwest::Client,
     key_rx: &mut tokio::sync::mpsc::Receiver<crate::events::Event>,
-    project_id: &str,
-    job_id: u64,
+    job: &crate::graphql::JobInfo,
 ) -> anyhow::Result<()> {
     tracing::info!("run");
+    let project_id = job
+        .project_id
+        .split("/")
+        .collect::<Vec<_>>()
+        .iter()
+        .rev()
+        .map(|s| s.to_string())
+        .next()
+        .unwrap();
+    let job_id = job
+        .id
+        .split("/")
+        .collect::<Vec<_>>()
+        .iter()
+        .rev()
+        .map(|s| s.to_string())
+        .next()
+        .unwrap();
     let uri = format!(
         "{}/projects/{}/jobs/{}/trace",
         crate::BASE_URL,
@@ -38,6 +48,12 @@ pub(crate) async fn run<B: Backend>(
                         terminal.clear()?;
                         return Ok(());
                     }
+                    termion::event::Key::PageUp => {
+                        // print!("{}", termion::scroll::Up(10));
+                    }
+                    termion::event::Key::PageDown => {
+                        // print!("{}", termion::scroll::Down(10));
+                    }
                     _ => (),
                 },
             },
@@ -45,7 +61,6 @@ pub(crate) async fn run<B: Backend>(
         if let Some(Ok(buf)) = logstream.next().await {
             logs.push(buf);
             let log_string = String::from_utf8(logs.iter().flatten().cloned().collect())?;
-            // tracing::info!("No lines: {}", log_spans.len());
             let mut new_log_strings = log_string.lines().map(|s| s.to_string()).collect();
             terminal.clear()?;
             for l in &new_log_strings {

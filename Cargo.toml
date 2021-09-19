@@ -21,3 +21,4 @@ termion = "1.5.6"
 tracing = "0.1"
 tracing-subscriber = "0.2"
 futures-util = "0.3.17"
+graphql_client = { version = "0.10.0", features = ["reqwest"] }
