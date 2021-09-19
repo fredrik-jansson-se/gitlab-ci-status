@@ -160,6 +160,14 @@ pub async fn pipeline_jobs(
         }
     }
 
+    res.sort_by(|j1, j2| match (&j1.status, &j2.status) {
+        (pipeline_jobs::CiJobStatus::FAILED, _) => std::cmp::Ordering::Less,
+        (_, pipeline_jobs::CiJobStatus::FAILED) => std::cmp::Ordering::Greater,
+        (pipeline_jobs::CiJobStatus::RUNNING, _) => std::cmp::Ordering::Less,
+        (_, pipeline_jobs::CiJobStatus::RUNNING) => std::cmp::Ordering::Greater,
+        (_, _) => std::cmp::Ordering::Less,
+    });
+
     Ok(res)
 }
 

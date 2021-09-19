@@ -99,39 +99,3 @@ pub(crate) async fn run<B: Backend>(
         })?;
     }
 }
-
-// #[derive(Debug, serde::Deserialize)]
-// struct GitlabJob {
-//     name: String,
-//     id: u64,
-//     web_url: String,
-//     status: JobStatus,
-// }
-
-// #[derive(Clone, Debug, serde::Deserialize, PartialEq, Eq, Hash)]
-// #[serde(rename_all(deserialize = "lowercase"))]
-// enum JobStatus {
-//     Active,
-//     Success,
-//     Failed,
-//     Running,
-//     Skipped,
-//     Manual,
-//     Created,
-//     Canceled,
-// }
-
-// impl std::fmt::Display for JobStatus {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         match self {
-//             Self::Active => write!(f, "active"),
-//             Self::Success => write!(f, "success"),
-//             Self::Failed => write!(f, "failed"),
-//             Self::Running => write!(f, "running"),
-//             Self::Skipped => write!(f, "skipped"),
-//             Self::Manual => write!(f, "manual"),
-//             Self::Created => write!(f, "created"),
-//             Self::Canceled => write!(f, "canceled"),
-//         }
-//     }
-// }
