@@ -82,13 +82,12 @@ pub(crate) async fn run<B: Backend>(
                     tui::widgets::Cell::from(job.name.clone()),
                     (&job.status).into(),
                     tui::widgets::Cell::from(job.stage_name.clone()),
-                    // tui::widgets::Cell::from(job.web_url.clone()),
                 ])
             });
 
             let table = Table::new(rows)
                 .block(Block::default().title(format!(
-                    "Last updated: {}",
+                    "Last updated: {} (ESC to exit, Enter to select job",
                     last_update.format("%Y-%m-%d %H:%M:%S")
                 )))
                 .header(tui::widgets::Row::new(vec!["Name", "State", "Stage"]))

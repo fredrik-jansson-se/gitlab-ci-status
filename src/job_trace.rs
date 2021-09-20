@@ -34,10 +34,14 @@ pub(crate) async fn run<B: Backend>(
         job_id
     );
 
+    // let get_jobs = async { client.get(uri).send().await?.text().await };
+
+    let mut cur_row = 0;
+    let mut following = true;
+    let mut last_update = chrono::Local::now() - chrono::Duration::seconds(100);
+    let mut dirty = false;
     let mut logs = Vec::new();
-    let mut logstream = client.get(uri).send().await?.bytes_stream();
-    let mut log_strings = Vec::new();
-    terminal.clear()?;
+
     loop {
         match key_rx.recv().await {
             None => return Ok(()),
@@ -49,24 +53,46 @@ pub(crate) async fn run<B: Backend>(
                         return Ok(());
                     }
                     termion::event::Key::PageUp => {
-                        // print!("{}", termion::scroll::Up(10));
+                        dirty = true;
+                        let height = terminal.size()?.height as usize;
+                        cur_row -= height.min(cur_row);
+                        following = false;
                     }
                     termion::event::Key::PageDown => {
-                        // print!("{}", termion::scroll::Down(10));
+                        dirty = true;
+                        let height = terminal.size()?.height as usize;
+                        cur_row += height;
+                        following = cur_row >= logs.len();
                     }
                     _ => (),
                 },
             },
         }
-        if let Some(Ok(buf)) = logstream.next().await {
-            logs.push(buf);
-            let log_string = String::from_utf8(logs.iter().flatten().cloned().collect())?;
-            let mut new_log_strings = log_string.lines().map(|s| s.to_string()).collect();
-            terminal.clear()?;
-            for l in &new_log_strings {
-                print!("{}\r\n", l);
+        if (chrono::Local::now() - last_update) > chrono::Duration::seconds(30) {
+            last_update = chrono::Local::now();
+            let log_text = client.get(&uri).send().await?.text().await?;
+            logs = log_text.lines().map(|s| s.to_string()).collect();
+            dirty = true;
+        }
+
+        if dirty {
+            dirty = false;
+
+            let height = terminal.size()?.height as usize;
+            if following {
+                let first_line = (logs.len() as i64 - height as i64).max(0) as usize;
+                cur_row = first_line;
             }
-            log_strings.append(&mut new_log_strings);
+            tracing::info!(
+                "cur_row: {}, logs: {}, height: {}",
+                cur_row,
+                logs.len(),
+                height
+            );
+            terminal.clear()?;
+            for log in logs.iter().skip(cur_row).take(height) {
+                print!("{}\r\n", log);
+            }
         }
     }
 }

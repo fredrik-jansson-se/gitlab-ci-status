@@ -83,7 +83,7 @@ pub(crate) async fn run<B: Backend>(
             }
             let table = Table::new(rows)
                 .block(Block::default().title(format!(
-                    "Last updated: {}",
+                    "Last updated: {} (ESC to exit, Enter to select pipeline)",
                     last_update.format("%Y-%m-%d %H:%M:%S")
                 )))
                 .header(tui::widgets::Row::new(vec![
