@@ -7,9 +7,9 @@ The GITLAB_ACCESS_TOKEN is obtained from gitlab and needs **api_read** rights.
 ```shell
 # Gitlab access token.
 GITLAB_ACCESS_TOKEN=<my access key>
-# Comma separated list of project ids
+# Comma separated list of project names
 PROJECT_NAMES="foo-group/project1,foo-group/project2"
-# Match ref against this regular expression
+# Match branch names against this regular expression (optional)
 MATCH_REF="master|(.*merge-requests.*)"
 ```
 
