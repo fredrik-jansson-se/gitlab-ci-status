@@ -68,7 +68,7 @@ pub(crate) async fn run<B: Backend>(
                 },
             },
         }
-        if (chrono::Local::now() - last_update) > chrono::Duration::seconds(30) {
+        if (chrono::Local::now() - last_update) > chrono::Duration::seconds(10) {
             last_update = chrono::Local::now();
             let log_text = client.get(&uri).send().await?.text().await?;
             logs = log_text.lines().map(|s| s.to_string()).collect();
