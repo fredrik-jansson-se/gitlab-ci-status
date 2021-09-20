@@ -1,7 +1,8 @@
 use graphql_client::GraphQLQuery;
 
 const GQL_URL: &str = "https://gitlab.com/api/graphql";
-// type URI = String;
+
+// type Time = chrono::DateTime<chrono::Local>;
 
 #[derive(GraphQLQuery)]
 #[graphql(
@@ -18,6 +19,7 @@ pub struct PipelineInfo {
     pub branch: String,
     pub web_url: String,
     pub status: project_pipelines::PipelineStatusEnum,
+    // pub created_at: Time,
 }
 pub async fn project_pipelines(
     client: &reqwest::Client,
@@ -30,6 +32,8 @@ pub async fn project_pipelines(
     let response_body =
         graphql_client::reqwest::post_graphql::<ProjectPipelines, _>(client, GQL_URL, variables)
             .await?;
+
+    tracing::info!(?response_body);
 
     let project = response_body
         .data
@@ -50,6 +54,7 @@ pub async fn project_pipelines(
             res.push(PipelineInfo {
                 project_name: name.to_string(),
                 pipeline_iid: pipeline.iid.to_string(),
+                // created_at: pipeline.created_at,
                 branch: pipeline
                     .ref_
                     .ok_or(anyhow::Error::msg("Failed to get branch name"))?,

@@ -51,11 +51,21 @@ pub(crate) async fn run<B: Backend>(
                         terminal.clear()?;
                         return Ok(());
                     }
+                    termion::event::Key::Up => {
+                        dirty = true;
+                        cur_row -= 1.min(cur_row);
+                        following = false;
+                    }
                     termion::event::Key::PageUp => {
                         dirty = true;
                         let height = terminal.size()?.height as usize;
                         cur_row -= height.min(cur_row);
                         following = false;
+                    }
+                    termion::event::Key::Down => {
+                        dirty = true;
+                        cur_row += 1;
+                        following = cur_row >= logs.len();
                     }
                     termion::event::Key::PageDown => {
                         dirty = true;
