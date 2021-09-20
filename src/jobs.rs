@@ -33,7 +33,8 @@ pub(crate) async fn run<B: Backend>(
 
                     termion::event::Key::PageDown => {
                         let mut cur_row = table_state.selected().unwrap_or(0);
-                        cur_row += 10;
+                        let size = terminal.size()?;
+                        cur_row += size.height as usize / 2;
                         table_state.select(Some(cur_row));
                     }
                     termion::event::Key::Up => {
@@ -45,8 +46,10 @@ pub(crate) async fn run<B: Backend>(
                     }
                     termion::event::Key::PageUp => {
                         let mut cur_row = table_state.selected().unwrap_or(0);
-                        if cur_row > 10 {
-                            cur_row -= 10;
+                        let size = terminal.size()?;
+                        let half_height = size.height as usize / 2;
+                        if cur_row > half_height {
+                            cur_row -= half_height;
                             table_state.select(Some(cur_row));
                         }
                     }
