@@ -1,4 +1,3 @@
-use futures_util::StreamExt;
 use tui::{backend::Backend, Terminal};
 
 #[tracing::instrument(skip(terminal, client, key_rx))]
