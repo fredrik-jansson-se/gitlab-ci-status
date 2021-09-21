@@ -2,14 +2,13 @@ use graphql_client::GraphQLQuery;
 
 const GQL_URL: &str = "https://gitlab.com/api/graphql";
 
-// type Time = chrono::DateTime<chrono::Local>;
+type Time = chrono::DateTime<chrono::Local>;
 
 #[derive(GraphQLQuery)]
 #[graphql(
     schema_path = "graphql/gitlab_schema.graphql",
     query_path = "graphql/project-pipelines.graphql",
-    response_derives = "Debug",
-    variable_derives = "Debug,Display,Clone"
+    response_derives = "Debug"
 )]
 struct ProjectPipelines;
 
@@ -19,8 +18,9 @@ pub struct PipelineInfo {
     pub branch: String,
     pub web_url: String,
     pub status: project_pipelines::PipelineStatusEnum,
-    // pub created_at: Time,
+    pub created_at: Time,
 }
+
 pub async fn project_pipelines(
     client: &reqwest::Client,
     name: &str,
@@ -33,36 +33,37 @@ pub async fn project_pipelines(
         graphql_client::reqwest::post_graphql::<ProjectPipelines, _>(client, GQL_URL, variables)
             .await?;
 
-    tracing::info!(?response_body);
+    tracing::debug!(?response_body);
 
     let project = response_body
         .data
         .and_then(|d| d.project)
-        .ok_or(anyhow::Error::msg("Failed to get project data"))?;
+        .ok_or(anyhow::anyhow!("Failed to get project data ({})", name))?;
 
-    let pipelines = project
-        .pipelines
-        .ok_or(anyhow::Error::msg("Expected pipeline data for project"))?;
+    let pipelines = project.pipelines.ok_or(anyhow::anyhow!(
+        "Expected pipeline data for project ({})",
+        name
+    ))?;
 
     let mut res = Vec::new();
 
     for pipeline in pipelines
         .nodes
-        .ok_or(anyhow::Error::msg(format!("No pipelines for {}", name)))?
+        .ok_or(anyhow::anyhow!("No pipelines ({})", name))?
     {
         if let Some(pipeline) = pipeline {
             res.push(PipelineInfo {
                 project_name: name.to_string(),
                 pipeline_iid: pipeline.iid.to_string(),
-                // created_at: pipeline.created_at,
+                created_at: pipeline.created_at,
                 branch: pipeline
                     .ref_
-                    .ok_or(anyhow::Error::msg("Failed to get branch name"))?,
+                    .ok_or(anyhow::anyhow!("Failed to get branch name ({})", name))?,
                 web_url: format!(
                     "https://www.gitlab.com{}",
                     pipeline
                         .path
-                        .ok_or(anyhow::Error::msg("Failed to get url"))?
+                        .ok_or(anyhow::anyhow!("Failed to get pipeline url ({})", name))?
                 ),
                 status: pipeline.status,
             });
@@ -202,7 +203,6 @@ fn stage_jobs(
             }
         }
     }
-    // tracing::info!(?stage_job);
     Ok(res)
 }
 impl<'a> From<&pipeline_jobs::CiJobStatus> for tui::widgets::Cell<'a> {

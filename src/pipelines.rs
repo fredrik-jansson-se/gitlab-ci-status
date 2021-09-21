@@ -17,7 +17,8 @@ pub(crate) async fn run<B: Backend>(
     let mut table_state = TableState::default();
     table_state.select(Some(0));
 
-    let mut last_update = chrono::Local::now() - chrono::Duration::seconds(100);
+    let mut refresh = true;
+    let mut last_update = chrono::Local::now();
     let mut pipelines: Vec<crate::graphql::PipelineInfo> = Vec::new();
     loop {
         match key_rx.recv().await {
@@ -52,6 +53,9 @@ pub(crate) async fn run<B: Backend>(
                             }
                         }
                     }
+                    termion::event::Key::Char('R') => {
+                        refresh = true;
+                    }
                     _k => {
                         // tracing::error!(?k);
                         ()
@@ -60,7 +64,8 @@ pub(crate) async fn run<B: Backend>(
             },
         }
 
-        if (chrono::Local::now() - last_update) > chrono::Duration::seconds(30) {
+        if refresh || (chrono::Local::now() - last_update) > chrono::Duration::seconds(30) {
+            refresh = false;
             last_update = chrono::Local::now();
             pipelines.clear();
             for project_name in project_names.iter() {
@@ -83,21 +88,29 @@ pub(crate) async fn run<B: Backend>(
             }
             let table = Table::new(rows)
                 .block(Block::default().title(format!(
-                    "Last updated: {} (ESC to exit, Enter to select pipeline)",
-                    last_update.format("%Y-%m-%d %H:%M:%S")
+                    "Last updated: {} (ESC to exit, Enter to list pipeline jobs, R to refesh)",
+                    last_update.format("%b %d %H:%M:%S")
                 )))
                 .header(tui::widgets::Row::new(vec![
-                    "Project", "Branch", "URL", "Status",
+                    "Project",
+                    "Branch",
+                    "Created At",
+                    "URL",
+                    "Status",
                 ]))
                 .widths(&[
                     Constraint::Percentage(15),
                     Constraint::Percentage(20),
-                    Constraint::Percentage(50),
-                    Constraint::Min(10),
+                    Constraint::Percentage(15),
+                    Constraint::Percentage(40),
+                    Constraint::Percentage(10),
                 ])
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD));
 
             f.render_stateful_widget(table, f.size(), &mut table_state);
+
+            // let help = tui::widgets::Block::default().title("Help");
+            // f.render_widget(help, f.size());
         })?;
     }
 }
@@ -107,6 +120,11 @@ fn pipeline_to_row<'a>(pipeline: &crate::graphql::PipelineInfo) -> tui::widgets:
     tui::widgets::Row::new(vec![
         project_name,
         pipeline.branch.clone().into(),
+        pipeline
+            .created_at
+            .format("%b %d %H:%M:%S")
+            .to_string()
+            .into(),
         pipeline.web_url.clone().into(),
         (&pipeline.status).into(),
     ])

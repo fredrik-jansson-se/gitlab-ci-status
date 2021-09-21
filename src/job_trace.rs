@@ -7,7 +7,6 @@ pub(crate) async fn run<B: Backend>(
     key_rx: &mut tokio::sync::mpsc::Receiver<crate::events::Event>,
     job: &crate::graphql::JobInfo,
 ) -> anyhow::Result<()> {
-    tracing::info!("run");
     let project_id = job
         .project_id
         .split("/")
@@ -32,8 +31,6 @@ pub(crate) async fn run<B: Backend>(
         project_id,
         job_id
     );
-
-    // let get_jobs = async { client.get(uri).send().await?.text().await };
 
     let mut cur_row = 0;
     let mut following = true;
@@ -92,7 +89,7 @@ pub(crate) async fn run<B: Backend>(
                 let first_line = (logs.len() as i64 - height as i64).max(0) as usize;
                 cur_row = first_line;
             }
-            tracing::info!(
+            tracing::debug!(
                 "cur_row: {}, logs: {}, height: {}",
                 cur_row,
                 logs.len(),

@@ -13,10 +13,11 @@ pub(crate) async fn run<B: Backend>(
     project_name: &str,
     pipeline_id: &str,
 ) -> anyhow::Result<()> {
-    let mut last_update = chrono::Local::now() - chrono::Duration::seconds(100);
+    let mut last_update = chrono::Local::now();
     let mut jobs: Vec<crate::graphql::JobInfo> = Vec::new();
     let mut table_state = TableState::default();
     table_state.select(Some(0));
+    let mut refresh = true;
 
     loop {
         match key_rx.recv().await {
@@ -59,13 +60,17 @@ pub(crate) async fn run<B: Backend>(
                         }
                         _ => (),
                     },
+                    termion::event::Key::Char('R') => {
+                        refresh = true;
+                    }
                     _ => (),
                 },
             },
         }
 
-        if (chrono::Local::now() - last_update) > chrono::Duration::seconds(30) {
+        if refresh || (chrono::Local::now() - last_update) > chrono::Duration::seconds(30) {
             last_update = chrono::Local::now();
+            refresh = false;
 
             jobs = crate::graphql::pipeline_jobs(client, project_name, pipeline_id).await?;
         }
@@ -87,8 +92,8 @@ pub(crate) async fn run<B: Backend>(
 
             let table = Table::new(rows)
                 .block(Block::default().title(format!(
-                    "Last updated: {} (ESC to exit, Enter to select job",
-                    last_update.format("%Y-%m-%d %H:%M:%S")
+                    "Last updated: {} (ESC to exit, Enter to select job, R to refesh)",
+                    last_update.format("%b %d %H:%M:%S")
                 )))
                 .header(tui::widgets::Row::new(vec!["Name", "State", "Stage"]))
                 .widths(&[

@@ -7,7 +7,8 @@ RUN apt-get update && apt-get install -y libssl-dev \
     && mkdir .cargo
 COPY Cargo.toml Cargo.lock /code/
 RUN cargo vendor > .cargo/config.toml
-COPY . /code
+COPY src /code/src
+COPY graphql /code/graphql
 RUN cargo build --release
 
 FROM debian:stable-slim

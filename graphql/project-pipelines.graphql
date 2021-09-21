@@ -7,6 +7,7 @@ query ProjectPipelines($name: ID!) {
         status
         ref
         path
+        createdAt
       }
     }
   }
