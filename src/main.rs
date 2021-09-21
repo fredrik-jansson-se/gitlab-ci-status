@@ -61,6 +61,7 @@ async fn main() -> anyhow::Result<()> {
     let backend = TermionBackend::new(screen);
     let mut terminal = Terminal::new(backend)?;
 
+    terminal.clear()?;
     if let Err(e) = pipelines::run(&mut terminal, client, projects_names).await {
         tracing::error!(%e);
     }

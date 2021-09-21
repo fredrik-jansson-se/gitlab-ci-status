@@ -14,4 +14,11 @@ MATCH_REF=master|(.*merge-requests.*)
 ```
 
 ## Running
+## Docker
+```shell
+docker run --rm -it --env-file=.env ghcr.io/fredrik-jansson-se/gitlab-ci-status:master
+```
+### From source
+```shell
 cargo run --release
+```
