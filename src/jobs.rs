@@ -92,8 +92,9 @@ pub(crate) async fn run<B: Backend>(
 
             let table = Table::new(rows)
                 .block(Block::default().title(format!(
-                    "Last updated: {} (ESC to exit, Enter to select job, R to refesh)",
-                    last_update.format("%b %d %H:%M:%S")
+                    "Last updated: {}, {} jobs (ESC to exit, Enter to select job, R to refesh)",
+                    last_update.format("%b %d %H:%M:%S"),
+                    jobs.len()
                 )))
                 .header(tui::widgets::Row::new(vec!["Name", "State", "Stage"]))
                 .widths(&[
