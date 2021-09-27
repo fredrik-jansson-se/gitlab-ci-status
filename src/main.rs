@@ -1,6 +1,8 @@
 use anyhow::Context;
 
+use std::io::Read;
 use termion::{raw::IntoRawMode, screen::AlternateScreen};
+use tokio::io::AsyncWriteExt;
 use tui::{backend::TermionBackend, Terminal};
 
 mod events;
@@ -10,6 +12,41 @@ mod jobs;
 mod pipelines;
 
 const BASE_URL: &str = "https://www.gitlab.com/api/v4";
+
+// async fn less_test() -> anyhow::Result<()> {
+//     let mut cmd = tokio::process::Command::new("less")
+//         .arg("+F")
+//         .stdin(std::process::Stdio::piped())
+//         .stdout(std::process::Stdio::inherit())
+//         .spawn()?;
+
+//     let mut my_stdin = termion::async_stdin();
+
+//     let mut less_stdin = cmd.stdin.take().unwrap();
+
+//     for i in 0..100 {
+//         less_stdin
+//             .write_all(format!("line {}", i).as_bytes())
+//             .await?;
+//     }
+
+//     let mut interval = tokio::time::interval(std::time::Duration::from_millis(100));
+//     let mut buf = vec![0; 1024];
+//     loop {
+//         interval.tick().await;
+
+//         if let Ok(size) = my_stdin.read(&mut buf) {
+//             if size > 0 {
+//                 tracing::info!("Sending {:?}", &buf[0..size]);
+//                 less_stdin.write_all(&buf[0..size]).await?;
+//                 less_stdin.flush();
+//             }
+//         }
+//     }
+
+//     cmd.wait().await;
+//     Ok(())
+// }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -62,6 +99,7 @@ async fn main() -> anyhow::Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     terminal.clear()?;
+    // let _ = dbg! {less_test().await};
     if let Err(e) = pipelines::run(&mut terminal, client, projects_names).await {
         tracing::error!(%e);
     }

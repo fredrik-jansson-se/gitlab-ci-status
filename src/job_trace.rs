@@ -102,3 +102,56 @@ pub(crate) async fn run<B: Backend>(
         }
     }
 }
+
+// #[tracing::instrument(skip(terminal, client, key_rx))]
+// pub(crate) async fn run_2<B: Backend>(
+//     terminal: &mut Terminal<B>,
+//     client: &reqwest::Client,
+//     key_rx: &mut tokio::sync::mpsc::Receiver<crate::events::Event>,
+//     job: &crate::graphql::JobInfo,
+// ) -> anyhow::Result<()> {
+//     let project_id = job
+//         .project_id
+//         .split("/")
+//         .collect::<Vec<_>>()
+//         .iter()
+//         .rev()
+//         .map(|s| s.to_string())
+//         .next()
+//         .unwrap();
+//     let job_id = job
+//         .id
+//         .split("/")
+//         .collect::<Vec<_>>()
+//         .iter()
+//         .rev()
+//         .map(|s| s.to_string())
+//         .next()
+//         .unwrap();
+//     let uri = format!(
+//         "{}/projects/{}/jobs/{}/trace",
+//         crate::BASE_URL,
+//         project_id,
+//         job_id
+//     );
+
+//     let mut cmd = tokio::process::Command::new("less")
+//         .arg("+F")
+//         .stdin(std::process::Stdio::piped())
+//         // .stdout(std::process::Stdio::
+//         .spawn()?;
+
+//     let less_stdin = cmd
+//         .stdin
+//         .take()
+//         .ok_or(anyhow::anyhow!("Failed to get stdin to less command"))?;
+
+//     loop {
+//         tokio::select! {
+//             _ = cmd.wait() => {
+//                 tracing::info!("less done");
+//                 return Ok(());
+//             }
+//         }
+//     }
+// }

@@ -12,7 +12,7 @@ chrono = { version = "0.4.19", features = ["serde"] }
 dotenv = "0.15"
 reqwest = { version = "0.11", features = ["json", "stream"] }
 serde = { version="1", features = ["derive"] }
-tokio = {version = "1", features = ["rt-multi-thread", "macros"] }
+tokio = {version = "1", features = ["rt-multi-thread", "macros", "process"] }
 tui = "0.16.0"
 termion = "1.5.6"
 tracing = "0.1"

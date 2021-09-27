@@ -6,6 +6,14 @@ use tui::{
     Terminal,
 };
 
+const HELP_TEXT: &str = r#"
+h               Close  help
+ESC             Exit
+up/down arrow   Select pipeline
+Enter           List pipleline jobs
+R               Refresh pipelines
+"#;
+
 pub(crate) async fn run<B: Backend>(
     terminal: &mut Terminal<B>,
     client: reqwest::Client,
@@ -20,6 +28,7 @@ pub(crate) async fn run<B: Backend>(
     let mut refresh = true;
     let mut last_update = chrono::Local::now();
     let mut pipelines: Vec<crate::graphql::PipelineInfo> = Vec::new();
+    let mut help_height_percent = 0;
     loop {
         match key_rx.recv().await {
             None => return Ok(()),
@@ -51,6 +60,13 @@ pub(crate) async fn run<B: Backend>(
                                 )
                                 .await?;
                             }
+                        }
+                    }
+                    termion::event::Key::Char('h') => {
+                        if help_height_percent != 0 {
+                            help_height_percent = 0;
+                        } else {
+                            help_height_percent = 50;
                         }
                     }
                     termion::event::Key::Char('R') => {
@@ -88,7 +104,7 @@ pub(crate) async fn run<B: Backend>(
             }
             let table = Table::new(rows)
                 .block(Block::default().title(format!(
-                    "Last updated: {} (ESC to exit, Enter to list pipeline jobs, R to refesh)",
+                    "Last updated: {} (h for help)",
                     last_update.format("%b %d %H:%M:%S")
                 )))
                 .header(tui::widgets::Row::new(vec![
@@ -107,10 +123,18 @@ pub(crate) async fn run<B: Backend>(
                 ])
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD));
 
-            f.render_stateful_widget(table, f.size(), &mut table_state);
+            let main_layout = tui::layout::Layout::default()
+                .constraints(vec![
+                    Constraint::Percentage(100 - help_height_percent),
+                    Constraint::Percentage(help_height_percent),
+                ])
+                .direction(tui::layout::Direction::Vertical)
+                .split(f.size());
 
-            // let help = tui::widgets::Block::default().title("Help");
-            // f.render_widget(help, f.size());
+            f.render_stateful_widget(table, main_layout[0], &mut table_state);
+
+            let help = tui::widgets::Paragraph::new(HELP_TEXT);
+            f.render_widget(help, main_layout[1]);
         })?;
     }
 }

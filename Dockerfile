@@ -10,7 +10,8 @@ COPY Cargo.toml Cargo.lock /code/
 RUN cargo vendor > .cargo/config.toml
 COPY src /code/src
 COPY graphql /code/graphql
-RUN cargo build --release
+RUN cargo build --release 
+RUN strip /code/target/release/gitlab-status
 
 FROM alpine
 RUN apk add --no-cache libgcc
