@@ -6,6 +6,14 @@ use tui::{
     Terminal,
 };
 
+const HELP_TEXT: &str = r#"
+h               Close  help
+ESC             Exit
+up/down arrow   Select job
+Enter           Trace job logs
+R               Refresh jobs
+"#;
+
 pub(crate) async fn run<B: Backend>(
     terminal: &mut Terminal<B>,
     client: &reqwest::Client,
@@ -18,6 +26,7 @@ pub(crate) async fn run<B: Backend>(
     let mut table_state = TableState::default();
     table_state.select(Some(0));
     let mut refresh = true;
+    let mut help_height_percent = 0;
 
     loop {
         match key_rx.recv().await {
@@ -63,6 +72,13 @@ pub(crate) async fn run<B: Backend>(
                     termion::event::Key::Char('R') => {
                         refresh = true;
                     }
+                    termion::event::Key::Char('h') => {
+                        if help_height_percent > 0 {
+                            help_height_percent = 0;
+                        } else {
+                            help_height_percent = 50;
+                        }
+                    }
                     _ => (),
                 },
             },
@@ -92,7 +108,7 @@ pub(crate) async fn run<B: Backend>(
 
             let table = Table::new(rows)
                 .block(Block::default().title(format!(
-                    "Last updated: {}, {} jobs (ESC to exit, Enter to select job, R to refesh)",
+                    "Last updated: {}, {} jobs (h for help)",
                     last_update.format("%b %d %H:%M:%S"),
                     jobs.len()
                 )))
@@ -103,7 +119,18 @@ pub(crate) async fn run<B: Backend>(
                     Constraint::Percentage(50),
                 ])
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD));
-            f.render_stateful_widget(table, f.size(), &mut table_state);
+
+            let main_layout = tui::layout::Layout::default()
+                .constraints(vec![
+                    Constraint::Percentage(100 - help_height_percent),
+                    Constraint::Percentage(help_height_percent),
+                ])
+                .direction(tui::layout::Direction::Vertical)
+                .split(f.size());
+            f.render_stateful_widget(table, main_layout[0], &mut table_state);
+
+            let help = tui::widgets::Paragraph::new(HELP_TEXT);
+            f.render_widget(help, main_layout[1]);
         })?;
     }
 }
