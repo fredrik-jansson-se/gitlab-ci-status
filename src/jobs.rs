@@ -45,6 +45,7 @@ pub(crate) async fn run<B: Backend>(
                         let mut cur_row = table_state.selected().unwrap_or(0);
                         let size = terminal.size()?;
                         cur_row += size.height as usize / 2;
+                        cur_row = cur_row.min(jobs.len() - 1);
                         table_state.select(Some(cur_row));
                     }
                     termion::event::Key::Up => {
@@ -60,8 +61,10 @@ pub(crate) async fn run<B: Backend>(
                         let half_height = size.height as usize / 2;
                         if cur_row > half_height {
                             cur_row -= half_height;
-                            table_state.select(Some(cur_row));
+                        } else {
+                            cur_row = 0;
                         }
+                        table_state.select(Some(cur_row));
                     }
                     termion::event::Key::Char('\n') => match table_state.selected() {
                         Some(row) if row < jobs.len() => {
