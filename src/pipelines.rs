@@ -85,9 +85,11 @@ pub(crate) async fn run<B: Backend>(
             last_update = chrono::Local::now();
             pipelines.clear();
             for project_name in project_names.iter() {
-                let mut new_pipelines =
-                    crate::graphql::project_pipelines(&client, &project_name).await?;
-                pipelines.append(&mut new_pipelines);
+                let new_pipelines = crate::graphql::project_pipelines(&client, &project_name).await;
+                match new_pipelines {
+                    Ok(mut new_pipelines) => pipelines.append(&mut new_pipelines),
+                    Err(e) => tracing::error!("{} - {}", project_name, e),
+                }
             }
         }
 

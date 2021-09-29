@@ -171,6 +171,8 @@ pub async fn pipeline_jobs(
         (_, pipeline_jobs::CiJobStatus::FAILED) => std::cmp::Ordering::Greater,
         (pipeline_jobs::CiJobStatus::RUNNING, _) => std::cmp::Ordering::Less,
         (_, pipeline_jobs::CiJobStatus::RUNNING) => std::cmp::Ordering::Greater,
+        (pipeline_jobs::CiJobStatus::PENDING, _) => std::cmp::Ordering::Less,
+        (_, pipeline_jobs::CiJobStatus::PENDING) => std::cmp::Ordering::Greater,
         (_, _) => std::cmp::Ordering::Less,
     });
 
@@ -215,6 +217,9 @@ impl<'a> From<&pipeline_jobs::CiJobStatus> for tui::widgets::Cell<'a> {
             }
             pipeline_jobs::CiJobStatus::FAILED => {
                 cell.style(Style::default().fg(tui::style::Color::Red))
+            }
+            pipeline_jobs::CiJobStatus::RUNNING => {
+                cell.style(Style::default().fg(tui::style::Color::Yellow))
             }
             _ => cell,
         }
