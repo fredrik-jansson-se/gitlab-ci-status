@@ -109,6 +109,28 @@ pub struct JobInfo {
     pub status: pipeline_jobs::CiJobStatus,
 }
 
+impl JobInfo {
+    pub(crate) fn project_id(&self) -> Option<String> {
+        self.project_id
+            .split("/")
+            .collect::<Vec<_>>()
+            .iter()
+            .rev()
+            .map(|s| s.to_string())
+            .next()
+    }
+
+    pub(crate) fn job_id(&self) -> Option<String> {
+        self.id
+            .split("/")
+            .collect::<Vec<_>>()
+            .iter()
+            .rev()
+            .map(|s| s.to_string())
+            .next()
+    }
+}
+
 pub async fn pipeline_jobs(
     client: &reqwest::Client,
     project_name: &str,

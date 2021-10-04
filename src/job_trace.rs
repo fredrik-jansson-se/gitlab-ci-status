@@ -7,24 +7,8 @@ pub(crate) async fn run<B: Backend>(
     key_rx: &mut tokio::sync::mpsc::Receiver<crate::events::Event>,
     job: &crate::graphql::JobInfo,
 ) -> anyhow::Result<()> {
-    let project_id = job
-        .project_id
-        .split("/")
-        .collect::<Vec<_>>()
-        .iter()
-        .rev()
-        .map(|s| s.to_string())
-        .next()
-        .unwrap();
-    let job_id = job
-        .id
-        .split("/")
-        .collect::<Vec<_>>()
-        .iter()
-        .rev()
-        .map(|s| s.to_string())
-        .next()
-        .unwrap();
+    let project_id = job.project_id().unwrap();
+    let job_id = job.job_id().unwrap();
     let uri = format!(
         "{}/projects/{}/jobs/{}/trace",
         crate::BASE_URL,
@@ -77,7 +61,11 @@ pub(crate) async fn run<B: Backend>(
         if (chrono::Local::now() - last_update) > chrono::Duration::seconds(10) {
             last_update = chrono::Local::now();
             let log_text = client.get(&uri).send().await?.text().await?;
-            logs = log_text.lines().map(|s| s.to_string()).collect();
+            let width = terminal.size()?.width as usize;
+            logs = log_text
+                .lines()
+                .map(|s| cut_line(s, width).replace("\n", "\r\n"))
+                .collect();
             dirty = true;
         }
 
@@ -155,3 +143,28 @@ pub(crate) async fn run<B: Backend>(
 //         }
 //     }
 // }
+
+fn cut_line(text: &str, width: usize) -> String {
+    text.chars()
+        .enumerate()
+        .flat_map(|(i, c)| {
+            if i != 0 && i % width == 0 {
+                Some('\n')
+            } else {
+                None
+            }
+            .into_iter()
+            .chain(std::iter::once(c))
+        })
+        .collect::<String>()
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn cut_lines() {
+        let long_text = "abcdefghijklmnop";
+        let cut_lines = super::cut_line(&long_text, 5);
+        assert_eq!(&cut_lines, "abcde\nfghij\nklmno\np");
+    }
+}

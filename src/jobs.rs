@@ -72,6 +72,29 @@ pub(crate) async fn run<B: Backend>(
                         }
                         _ => (),
                     },
+                    // termion::event::Key::Char('P') => match table_state.selected() {
+                    //     Some(row) if row < jobs.len() => {
+                    //         let project_id = project_name.replace("/", "%2F");
+                    //         let job_id = jobs[row].job_id().unwrap();
+                    //         let uri = format!(
+                    //             "{}/projects/{}/jobs/{}/play",
+                    //             crate::BASE_URL,
+                    //             project_id,
+                    //             job_id
+                    //         );
+                    //         let res = client.post(uri).send().await;
+                    //         tracing::info!(?res);
+                    //         if let Err(e) = res {
+                    //             tracing::error!(
+                    //                 "play job project_id: {} job_id: {}, error: {}",
+                    //                 project_id,
+                    //                 job_id,
+                    //                 e
+                    //             );
+                    //         }
+                    //     }
+                    //     _ => (),
+                    // },
                     termion::event::Key::Char('R') => {
                         refresh = true;
                     }
