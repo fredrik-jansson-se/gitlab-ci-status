@@ -20,7 +20,7 @@ pub(crate) async fn run<B: Backend>(
     let mut following = true;
     let mut last_update = chrono::Local::now() - chrono::Duration::seconds(100);
     let mut dirty = false;
-    let mut logs = Vec::new();
+    let mut logs: Vec<String> = Vec::new();
 
     loop {
         match key_rx.recv().await {
@@ -76,10 +76,7 @@ pub(crate) async fn run<B: Backend>(
             last_update = chrono::Local::now();
             let log_text = client.get(&uri).send().await?.text().await?;
             let width = terminal.size()?.width as usize - 1;
-            logs = log_text
-                .lines()
-                .map(|s| cut_line(s, width).replace("\n", "\r\n"))
-                .collect();
+            logs = log_text.lines().flat_map(|s| cut_line(s, width)).collect();
             dirty = true;
         }
 
@@ -158,19 +155,12 @@ pub(crate) async fn run<B: Backend>(
 //     }
 // }
 
-fn cut_line(text: &str, width: usize) -> String {
+fn cut_line(text: &str, width: usize) -> Vec<String> {
     text.chars()
-        .enumerate()
-        .flat_map(|(i, c)| {
-            if i != 0 && i % width == 0 {
-                Some('\n')
-            } else {
-                None
-            }
-            .into_iter()
-            .chain(std::iter::once(c))
-        })
-        .collect::<String>()
+        .collect::<Vec<char>>()
+        .chunks(width)
+        .map(|c| c.iter().collect::<String>())
+        .collect::<Vec<String>>()
 }
 
 #[cfg(test)]
@@ -179,6 +169,6 @@ mod test {
     fn cut_lines() {
         let long_text = "abcdefghijklmnop";
         let cut_lines = super::cut_line(&long_text, 5);
-        assert_eq!(&cut_lines, "abcde\nfghij\nklmno\np");
+        assert_eq!(cut_lines.as_ref(), vec!["abcde", "fghij", "klmno", "p"]);
     }
 }
