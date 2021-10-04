@@ -75,6 +75,10 @@ pub(crate) async fn run<B: Backend>(
         if (chrono::Local::now() - last_update) > chrono::Duration::seconds(10) {
             last_update = chrono::Local::now();
             let log_text = client.get(&uri).send().await?.text().await?;
+            // let log_text = (0..100)
+            //     .map(|v| v.to_string())
+            //     .collect::<Vec<_>>()
+            //     .join("\n");
             let width = terminal.size()?.width as usize - 1;
             logs = log_text.lines().flat_map(|s| cut_line(s, width)).collect();
             dirty = true;
@@ -95,7 +99,7 @@ pub(crate) async fn run<B: Backend>(
                 height
             );
             terminal.clear()?;
-            for log in logs.iter().skip(cur_row).take(height) {
+            for log in logs.iter().skip(cur_row).take(height - 1) {
                 print!("{}\r\n", log);
             }
         }
