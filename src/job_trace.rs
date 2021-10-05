@@ -1,5 +1,7 @@
 use tui::{backend::Backend, Terminal};
 
+const JUMP_HEIGHT_DIFF: isize = 3;
+
 #[tracing::instrument(skip(terminal, client, key_rx))]
 pub(crate) async fn run<B: Backend>(
     terminal: &mut Terminal<B>,
@@ -16,7 +18,7 @@ pub(crate) async fn run<B: Backend>(
         job_id
     );
 
-    let mut cur_row = 0;
+    let mut cur_row: isize = 0;
     let mut following = true;
     let mut last_update = chrono::Local::now() - chrono::Duration::seconds(100);
     let mut dirty = false;
@@ -39,20 +41,20 @@ pub(crate) async fn run<B: Backend>(
                     }
                     termion::event::Key::PageUp => {
                         dirty = true;
-                        let height = terminal.size()?.height as usize;
+                        let height = terminal.size()?.height as isize - JUMP_HEIGHT_DIFF;
                         cur_row -= height.min(cur_row);
                         following = false;
                     }
                     termion::event::Key::Down => {
                         dirty = true;
                         cur_row += 1;
-                        following = cur_row >= logs.len();
+                        following = cur_row >= logs.len() as _;
                     }
                     termion::event::Key::PageDown => {
                         dirty = true;
-                        let height = terminal.size()?.height as usize;
-                        cur_row += height;
-                        following = cur_row >= logs.len();
+                        let height = terminal.size()?.height as isize;
+                        cur_row += height - JUMP_HEIGHT_DIFF;
+                        following = cur_row >= logs.len() as _;
                     }
                     termion::event::Key::Char('g') => {
                         dirty = true;
@@ -61,9 +63,9 @@ pub(crate) async fn run<B: Backend>(
                     }
                     termion::event::Key::Char('G') => {
                         dirty = true;
-                        let height = terminal.size()?.height as usize;
-                        if logs.len() > height {
-                            cur_row = logs.len() - height;
+                        let height = terminal.size()?.height as isize;
+                        if logs.len() > height as _ {
+                            cur_row = logs.len() as isize - height;
                         } else {
                             cur_row = 0;
                         }
@@ -90,7 +92,7 @@ pub(crate) async fn run<B: Backend>(
             let height = terminal.size()?.height as usize;
             if following {
                 let first_line = (logs.len() as i64 - height as i64).max(0) as usize;
-                cur_row = first_line;
+                cur_row = first_line as _;
             }
             tracing::debug!(
                 "cur_row: {}, logs: {}, height: {}",
@@ -99,7 +101,7 @@ pub(crate) async fn run<B: Backend>(
                 height
             );
             terminal.clear()?;
-            for log in logs.iter().skip(cur_row).take(height - 1) {
+            for log in logs.iter().skip(cur_row as _).take(height - 1) {
                 print!("{}\r\n", log);
             }
         }
