@@ -8,10 +8,11 @@ type Time = chrono::DateTime<chrono::Local>;
 #[graphql(
     schema_path = "graphql/gitlab_schema.graphql",
     query_path = "graphql/project-pipelines.graphql",
-    response_derives = "Debug"
+    response_derives = "Debug,Clone"
 )]
 struct ProjectPipelines;
 
+#[derive(Clone)]
 pub struct PipelineInfo {
     pub project_name: String,
     pub pipeline_iid: String,
@@ -95,12 +96,12 @@ type JobID = String;
 #[graphql(
     schema_path = "graphql/gitlab_schema.graphql",
     query_path = "graphql/pipeline-jobs.graphql",
-    response_derives = "Debug",
+    response_derives = "Debug,Clone",
     variable_derives = "Debug,Display,Clone"
 )]
 struct PipelineJobs;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct JobInfo {
     pub project_id: String,
     pub id: String,

@@ -28,6 +28,10 @@ pub(crate) async fn run<B: Backend>(
     let mut refresh = true;
     let mut help_height_percent = 0;
 
+    let (jobs_updated_tx, mut jobs_updated_rx) =
+        tokio::sync::watch::channel((chrono::Local::now(), Vec::new()));
+    let jobs_updated_tx = std::sync::Arc::new(tokio::sync::Mutex::new(jobs_updated_tx));
+
     loop {
         match key_rx.recv().await {
             None => return Ok(()),
@@ -111,10 +115,24 @@ pub(crate) async fn run<B: Backend>(
         }
 
         if refresh || (chrono::Local::now() - last_update) > chrono::Duration::seconds(30) {
-            last_update = chrono::Local::now();
+            // last_update = chrono::Local::now();
             refresh = false;
 
-            jobs = crate::graphql::pipeline_jobs(client, project_name, pipeline_id).await?;
+            // jobs = crate::graphql::pipeline_jobs(client, project_name, pipeline_id).await?;
+            tokio::spawn(update_jobs(
+                client.clone(),
+                project_name.to_string(),
+                pipeline_id.to_string(),
+                jobs_updated_tx.clone(),
+            ));
+        }
+
+        {
+            let new_jobs = jobs_updated_rx.borrow_and_update();
+            if new_jobs.0 != last_update {
+                last_update = new_jobs.0;
+                jobs = new_jobs.1.to_vec();
+            }
         }
 
         if let Some(row) = table_state.selected() {
@@ -158,5 +176,32 @@ pub(crate) async fn run<B: Backend>(
             let help = tui::widgets::Paragraph::new(HELP_TEXT);
             f.render_widget(help, main_layout[1]);
         })?;
+    }
+}
+
+async fn update_jobs(
+    client: reqwest::Client,
+    project_name: String,
+    pipeline_id: String,
+    jobs_updated_tx: std::sync::Arc<
+        tokio::sync::Mutex<
+            tokio::sync::watch::Sender<(
+                chrono::DateTime<chrono::Local>,
+                Vec<crate::graphql::JobInfo>,
+            )>,
+        >,
+    >,
+) {
+    let jobs = crate::graphql::pipeline_jobs(&client, &project_name, &pipeline_id).await;
+
+    match jobs {
+        Ok(jobs) => {
+            let jobs_updated_tx = jobs_updated_tx.lock().await;
+            let now = chrono::Local::now();
+            let _ = jobs_updated_tx.send((now, jobs));
+        }
+        Err(e) => {
+            tracing::error!("update_jobs: {} {} - {}", project_name, pipeline_id, e);
+        }
     }
 }

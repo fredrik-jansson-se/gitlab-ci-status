@@ -29,6 +29,9 @@ pub(crate) async fn run<B: Backend>(
     let mut last_update = chrono::Local::now();
     let mut pipelines: Vec<crate::graphql::PipelineInfo> = Vec::new();
     let mut help_height_percent = 0;
+
+    let (pipe_tx, mut pipe_rx) = tokio::sync::watch::channel((chrono::Local::now(), Vec::new()));
+    let pipe_tx = std::sync::Arc::new(tokio::sync::Mutex::new(pipe_tx));
     loop {
         match key_rx.recv().await {
             None => return Ok(()),
@@ -83,13 +86,18 @@ pub(crate) async fn run<B: Backend>(
         if refresh || (chrono::Local::now() - last_update) > chrono::Duration::seconds(30) {
             refresh = false;
             last_update = chrono::Local::now();
-            pipelines.clear();
-            for project_name in project_names.iter() {
-                let new_pipelines = crate::graphql::project_pipelines(&client, &project_name).await;
-                match new_pipelines {
-                    Ok(mut new_pipelines) => pipelines.append(&mut new_pipelines),
-                    Err(e) => tracing::error!("{} - {}", project_name, e),
-                }
+            let client = client.clone();
+            let project_names = project_names.clone();
+            let pipe_tx = pipe_tx.clone();
+            tokio::spawn(update_pipelines(client, project_names, pipe_tx));
+        }
+
+        // Se if we have new pipeline jobs
+        {
+            let new_pipes = pipe_rx.borrow_and_update();
+            if new_pipes.0 != last_update {
+                last_update = new_pipes.0;
+                pipelines = new_pipes.1.to_vec();
             }
         }
 
@@ -154,4 +162,31 @@ fn pipeline_to_row<'a>(pipeline: &crate::graphql::PipelineInfo) -> tui::widgets:
         pipeline.web_url.clone().into(),
         (&pipeline.status).into(),
     ])
+}
+
+async fn update_pipelines(
+    client: reqwest::Client,
+    project_names: Vec<String>,
+    pipe_tx: std::sync::Arc<
+        tokio::sync::Mutex<
+            tokio::sync::watch::Sender<(
+                chrono::DateTime<chrono::Local>,
+                Vec<crate::graphql::PipelineInfo>,
+            )>,
+        >,
+    >,
+) {
+    let mut pipelines = Vec::new();
+    for project_name in project_names.iter() {
+        let new_pipelines = crate::graphql::project_pipelines(&client, &project_name).await;
+        match new_pipelines {
+            Ok(mut new_pipelines) => pipelines.append(&mut new_pipelines),
+            Err(e) => tracing::error!("{} - {}", project_name, e),
+        }
+    }
+
+    let pipe_tx = pipe_tx.lock().await;
+    let now = chrono::Local::now();
+
+    let _ = pipe_tx.send((now, pipelines));
 }

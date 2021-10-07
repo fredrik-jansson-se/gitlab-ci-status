@@ -7,7 +7,7 @@ pub(crate) enum Event {
 
 pub(crate) async fn event_handler(tx: tokio::sync::mpsc::Sender<Event>) {
     let mut keys = termion::async_stdin().keys();
-    let mut interval = tokio::time::interval(std::time::Duration::from_millis(200));
+    let mut interval = tokio::time::interval(std::time::Duration::from_millis(50));
     loop {
         let res = match keys.next() {
             None => {
