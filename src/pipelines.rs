@@ -131,7 +131,11 @@ pub(crate) async fn run<B: Backend>(
                     Constraint::Percentage(40),
                     Constraint::Percentage(10),
                 ])
-                .highlight_style(Style::default().add_modifier(Modifier::BOLD));
+                .highlight_style(
+                    Style::default()
+                        .add_modifier(Modifier::BOLD)
+                        .add_modifier(Modifier::UNDERLINED),
+                );
 
             let main_layout = tui::layout::Layout::default()
                 .constraints(vec![
