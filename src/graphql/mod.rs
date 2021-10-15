@@ -22,12 +22,13 @@ pub struct PipelineInfo {
     pub created_at: Time,
 }
 
-pub async fn project_pipelines(
+pub(crate) async fn project_pipelines(
     client: &reqwest::Client,
-    name: &str,
+    project: &crate::config::Project,
 ) -> anyhow::Result<Vec<PipelineInfo>> {
     let variables = project_pipelines::Variables {
-        name: name.to_string(),
+        name: project.name.clone(),
+        num: (2 * project.num_pipelines) as _,
     };
 
     let response_body =
@@ -36,40 +37,51 @@ pub async fn project_pipelines(
 
     tracing::debug!(?response_body);
 
-    let project = response_body
+    let proj = response_body
         .data
         .and_then(|d| d.project)
-        .ok_or(anyhow::anyhow!("Failed to get project data ({})", name))?;
+        .ok_or(anyhow::anyhow!(
+            "Failed to get project data ({})",
+            project.name
+        ))?;
 
-    let pipelines = project.pipelines.ok_or(anyhow::anyhow!(
+    let pipelines = proj.pipelines.ok_or(anyhow::anyhow!(
         "Expected pipeline data for project ({})",
-        name
+        project.name
     ))?;
 
     let mut res = Vec::new();
 
     for pipeline in pipelines
         .nodes
-        .ok_or(anyhow::anyhow!("No pipelines ({})", name))?
+        .ok_or(anyhow::anyhow!("No pipelines ({})", project.name))?
     {
         if let Some(pipeline) = pipeline {
+            let branch = pipeline.ref_.ok_or(anyhow::anyhow!(
+                "Failed to get branch name ({})",
+                project.name
+            ))?;
+
+            if !project.match_branch_re.is_match(&branch) {
+                continue;
+            }
             res.push(PipelineInfo {
-                project_name: name.to_string(),
+                project_name: project.name.to_string(),
                 pipeline_iid: pipeline.iid.to_string(),
                 created_at: pipeline.created_at,
-                branch: pipeline
-                    .ref_
-                    .ok_or(anyhow::anyhow!("Failed to get branch name ({})", name))?,
+                branch,
                 web_url: format!(
                     "https://www.gitlab.com{}",
-                    pipeline
-                        .path
-                        .ok_or(anyhow::anyhow!("Failed to get pipeline url ({})", name))?
+                    pipeline.path.ok_or(anyhow::anyhow!(
+                        "Failed to get pipeline url ({})",
+                        project.name
+                    ))?
                 ),
                 status: pipeline.status,
             });
         }
     }
+    res.truncate(project.num_pipelines);
 
     Ok(res)
 }

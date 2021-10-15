@@ -1,3 +1,5 @@
+//  printf '\e]8;;http://example.com\e\\This is a link\e]8;;\e\\\n'
+//
 use tui::{
     backend::Backend,
     layout::Constraint,

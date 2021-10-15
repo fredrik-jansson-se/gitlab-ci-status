@@ -17,7 +17,7 @@ R               Refresh pipelines
 pub(crate) async fn run<B: Backend>(
     terminal: &mut Terminal<B>,
     client: reqwest::Client,
-    project_names: Vec<String>,
+    projects: Vec<crate::config::Project>,
 ) -> anyhow::Result<()> {
     let (key_tx, mut key_rx) = tokio::sync::mpsc::channel(10);
     tokio::spawn(crate::events::event_handler(key_tx));
@@ -87,9 +87,9 @@ pub(crate) async fn run<B: Backend>(
             refresh = false;
             last_update = chrono::Local::now();
             let client = client.clone();
-            let project_names = project_names.clone();
+            // let project_names = project.iter().map(|p| p.name.clone()).collect();
             let pipe_tx = pipe_tx.clone();
-            tokio::spawn(update_pipelines(client, project_names, pipe_tx));
+            tokio::spawn(update_pipelines(client, projects.clone(), pipe_tx));
         }
 
         // Se if we have new pipeline jobs
@@ -168,9 +168,9 @@ fn pipeline_to_row<'a>(pipeline: &crate::graphql::PipelineInfo) -> tui::widgets:
     ])
 }
 
-async fn update_pipelines(
+async fn update_pipelines<'a>(
     client: reqwest::Client,
-    project_names: Vec<String>,
+    projects: Vec<crate::config::Project>,
     pipe_tx: std::sync::Arc<
         tokio::sync::Mutex<
             tokio::sync::watch::Sender<(
@@ -181,11 +181,11 @@ async fn update_pipelines(
     >,
 ) {
     let mut pipelines = Vec::new();
-    for project_name in project_names.iter() {
-        let new_pipelines = crate::graphql::project_pipelines(&client, &project_name).await;
+    for project in projects.iter() {
+        let new_pipelines = crate::graphql::project_pipelines(&client, &project).await;
         match new_pipelines {
             Ok(mut new_pipelines) => pipelines.append(&mut new_pipelines),
-            Err(e) => tracing::error!("{} - {}", project_name, e),
+            Err(e) => tracing::error!("{} - {}", project.name, e),
         }
     }
 

@@ -1,6 +1,6 @@
-query ProjectPipelines($name: ID!) {
+query ProjectPipelines($name: ID!, $num: Int!) {
   project(fullPath: $name) {
-    pipelines(first: 5) {
+    pipelines(first: $num) {
       nodes {
         id
         iid

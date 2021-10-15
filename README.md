@@ -1,22 +1,29 @@
 # Monitor CI Pipelines
-Set the following environment variables, or put them in a `.env` file.
+Create a config.yaml file.
 
-The GITLAB_ACCESS_TOKEN is obtained from gitlab and needs **api_read** rights.
+The gitlab-access-token is obtained from gitlab and needs **api_read** rights.
 
-## Example .env
-```shell
-# Gitlab access token.
-GITLAB_ACCESS_TOKEN=<my access key>
-# Comma separated list of project names
-PROJECT_NAMES=foo-group/project1,foo-group/project2
-# Match branch names against this regular expression (optional)
-MATCH_REF=master|(.*merge-requests.*)
+**NOTE** First num-pipelines pipelines are fetched from Gitlab, then the match-branch-re regular expression is used as a filter. Therefore there may be less than num-pipelines pipelines rendered.
+
+## Example config.yaml
+```yaml
+gitlab-access-token: xxx
+projects:
+  - name: avassa/code
+    # Default is 5
+    # num-pipelines: 6
+
+    # Match branch name against this regex
+    # match-branch-re: "master"
+
+  - name: avassa/control-tower
+  - name: avassa/system-e2e-test
 ```
 
 ## Running
 ## Docker
 ```shell
-docker run --rm -it --env-file=.env ghcr.io/fredrik-jansson-se/gitlab-ci-status:master
+docker run --rm -it -vconfig.yaml:/config.yaml ghcr.io/fredrik-jansson-se/gitlab-ci-status:master
 ```
 ### From source
 ```shell

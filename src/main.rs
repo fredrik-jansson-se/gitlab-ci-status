@@ -1,9 +1,9 @@
-use anyhow::Context;
 // https://github.com/linkerd/linkerd-await/blob/57590fc9c808216a879f56be2c181d5353b397cc/src/main.rs
 
 use termion::{raw::IntoRawMode, screen::AlternateScreen};
 use tui::{backend::TermionBackend, Terminal};
 
+mod config;
 mod events;
 mod graphql;
 mod job_trace;
@@ -27,23 +27,16 @@ async fn main() -> anyhow::Result<()> {
             .init();
     }
 
-    let access_key = std::env::var("GITLAB_ACCESS_TOKEN").context("GITLAB_ACCESS_TOKEN")?;
-    let projects_names = std::env::var("PROJECT_NAMES")
-        .context("PROJECT_NAMES")?
-        .split(",")
-        .map(|s| s.trim())
-        .map(ToOwned::to_owned)
-        .inspect(|name| tracing::info!(?name))
-        .collect::<Vec<String>>();
+    let cfg = config::load_config()?;
 
     let mut headers = reqwest::header::HeaderMap::new();
 
-    let mut private_token = reqwest::header::HeaderValue::from_str(&access_key)?;
+    let mut private_token = reqwest::header::HeaderValue::from_str(&cfg.gitlab_access_token)?;
     private_token.set_sensitive(true);
     headers.insert("PRIVATE-TOKEN", private_token);
 
     let mut auth_header =
-        reqwest::header::HeaderValue::from_str(&format!("Bearer {}", access_key))?;
+        reqwest::header::HeaderValue::from_str(&format!("Bearer {}", cfg.gitlab_access_token))?;
     auth_header.set_sensitive(true);
     headers.insert(reqwest::header::AUTHORIZATION, auth_header);
 
@@ -63,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     terminal.clear()?;
-    if let Err(e) = pipelines::run(&mut terminal, client, projects_names).await {
+    if let Err(e) = pipelines::run(&mut terminal, client, cfg.projects).await {
         tracing::error!(%e);
     }
     Ok(())
