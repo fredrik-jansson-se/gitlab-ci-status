@@ -23,7 +23,7 @@ projects:
 ## Running
 ## Docker
 ```shell
-docker run --rm -it -vconfig.yaml:/config.yaml ghcr.io/fredrik-jansson-se/gitlab-ci-status:master
+docker run -it --rm --mount type=bind,source="$(pwd)/config.yaml",target=/config.yaml ghcr.io/fredrik-jansson-se/gitlab-ci-status:master
 ```
 ### From source
 ```shell
