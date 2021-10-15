@@ -1,5 +1,6 @@
 // https://github.com/linkerd/linkerd-await/blob/57590fc9c808216a879f56be2c181d5353b397cc/src/main.rs
 
+use clap::{crate_authors, crate_description, crate_name, crate_version};
 use termion::{raw::IntoRawMode, screen::AlternateScreen};
 use tui::{backend::TermionBackend, Terminal};
 
@@ -27,18 +28,18 @@ async fn main() -> anyhow::Result<()> {
             .init();
     }
 
-    let matches = clap::App::new("Gitlab CI Status")
-        .author("Fredrik Jansson")
+    let matches = clap::app_from_crate!()
         .arg(
             clap::Arg::with_name("config-file")
                 .short("c")
                 .long("config-file")
                 .takes_value(true)
+                .default_value("config.yaml")
                 .help("Path to config.yaml"),
         )
         .get_matches();
 
-    let cfg_file = matches.value_of("config-file").unwrap_or("config.yaml");
+    let cfg_file = matches.value_of("config-file").unwrap();
 
     let cfg = config::load_config(&cfg_file)?;
 
