@@ -27,7 +27,20 @@ async fn main() -> anyhow::Result<()> {
             .init();
     }
 
-    let cfg = config::load_config()?;
+    let matches = clap::App::new("Gitlab CI Status")
+        .author("Fredrik Jansson")
+        .arg(
+            clap::Arg::with_name("config-file")
+                .short("c")
+                .long("config-file")
+                .takes_value(true)
+                .help("Path to config.yaml"),
+        )
+        .get_matches();
+
+    let cfg_file = matches.value_of("config-file").unwrap_or("config.yaml");
+
+    let cfg = config::load_config(&cfg_file)?;
 
     let mut headers = reqwest::header::HeaderMap::new();
 

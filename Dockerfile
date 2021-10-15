@@ -16,4 +16,4 @@ RUN strip /code/target/release/gitlab-status
 FROM alpine
 RUN apk add --no-cache libgcc
 COPY --from=build /code/target/release/gitlab-status /bin/
-CMD ["gitlab-status"]
+CMD ["gitlab-status", "-c", "/config.yaml"]

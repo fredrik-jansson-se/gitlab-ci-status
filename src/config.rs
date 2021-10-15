@@ -1,3 +1,5 @@
+use anyhow::Context;
+
 fn default_num_pipelines() -> usize {
     5
 }
@@ -47,10 +49,10 @@ pub(crate) struct Project {
     pub num_pipelines: usize,
 }
 
-pub(crate) fn load_config() -> anyhow::Result<Config> {
-    let cfg = std::fs::read("config.yaml")?;
+pub(crate) fn load_config(cfg_file: &str) -> anyhow::Result<Config> {
+    let cfg = std::fs::read(cfg_file).context(cfg_file.to_string())?;
 
-    let mut config: Config = serde_yaml::from_slice(&cfg)?;
+    let config: Config = serde_yaml::from_slice(&cfg)?;
 
     Ok(config)
 }

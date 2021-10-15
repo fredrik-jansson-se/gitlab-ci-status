@@ -3,7 +3,7 @@ Create a config.yaml file.
 
 The gitlab-access-token is obtained from gitlab and needs **api_read** rights.
 
-**NOTE** First num-pipelines pipelines are fetched from Gitlab, then the match-branch-re regular expression is used as a filter. Therefore there may be less than num-pipelines pipelines rendered.
+**NOTE** First 2 * num-pipelines pipelines are fetched from Gitlab, then the match-branch-re regular expression is used as a filter. Therefore there may be less than num-pipelines pipelines rendered.
 
 ## Example config.yaml
 ```yaml

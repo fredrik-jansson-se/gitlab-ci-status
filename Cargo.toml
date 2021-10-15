@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1"
 chrono = { version = "0.4.19", features = ["serde"] }
+clap = "2.33.3"
 dotenv = "0.15"
 graphql_client = { version = "0.10.0", features = ["reqwest"] }
 regex = "1.5.4"
