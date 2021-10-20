@@ -108,7 +108,7 @@ type JobID = String;
 #[graphql(
     schema_path = "graphql/gitlab_schema.graphql",
     query_path = "graphql/pipeline-jobs.graphql",
-    response_derives = "Debug,Clone",
+    response_derives = "Debug,Clone,Hash,PartialEq,Eq",
     variable_derives = "Debug,Display,Clone"
 )]
 struct PipelineJobs;
@@ -121,6 +121,7 @@ pub struct JobInfo {
     pub name: String,
     pub status: pipeline_jobs::CiJobStatus,
 }
+pub use pipeline_jobs::CiJobStatus;
 
 impl JobInfo {
     pub(crate) fn project_id(&self) -> Option<String> {

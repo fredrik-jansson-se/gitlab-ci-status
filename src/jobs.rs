@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 //  printf '\e]8;;http://example.com\e\\This is a link\e]8;;\e\\\n'
 //
 use tui::{
@@ -33,6 +35,8 @@ pub(crate) async fn run<B: Backend>(
     let (jobs_updated_tx, mut jobs_updated_rx) =
         tokio::sync::watch::channel((chrono::Local::now(), Vec::new()));
     let jobs_updated_tx = std::sync::Arc::new(tokio::sync::Mutex::new(jobs_updated_tx));
+
+    let mut jobs_per_type = HashMap::new();
 
     loop {
         match key_rx.recv().await {
@@ -134,6 +138,11 @@ pub(crate) async fn run<B: Backend>(
             if new_jobs.0 != last_update {
                 last_update = new_jobs.0;
                 jobs = new_jobs.1.to_vec();
+                jobs_per_type.clear();
+                for job in jobs.iter() {
+                    let entry = jobs_per_type.entry(job.status.clone()).or_insert(0);
+                    *entry += 1;
+                }
             }
         }
 
@@ -154,10 +163,13 @@ pub(crate) async fn run<B: Backend>(
 
             let table = Table::new(rows)
                 .block(Block::default().title(format!(
-                    "Last updated: {}, {} jobs (h for help)",
-                    last_update.format("%b %d %H:%M:%S"),
-                    jobs.len()
-                )))
+                        "Last updated: {}, {} jobs ({} pending) (h for help)",
+                        last_update.format("%b %d %H:%M:%S"),
+                        jobs.len(),
+                        jobs_per_type
+                            .get(&crate::graphql::CiJobStatus::PENDING)
+                            .unwrap_or(&0)
+                    )))
                 .header(tui::widgets::Row::new(vec!["Name", "State", "Stage"]))
                 .widths(&[
                     Constraint::Percentage(30),
