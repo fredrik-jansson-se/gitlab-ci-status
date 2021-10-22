@@ -63,6 +63,7 @@ pub(crate) async fn run<B: Backend>(
                     }
                     termion::event::Key::Char('G') => {
                         dirty = true;
+                        following = true;
                         let height = terminal.size()?.height as isize;
                         if logs.len() > height as _ {
                             cur_row = logs.len() as isize - height;
@@ -77,10 +78,6 @@ pub(crate) async fn run<B: Backend>(
         if (chrono::Local::now() - last_update) > chrono::Duration::seconds(10) {
             last_update = chrono::Local::now();
             let log_text = client.get(&uri).send().await?.text().await?;
-            // let log_text = (0..100)
-            //     .map(|v| v.to_string())
-            //     .collect::<Vec<_>>()
-            //     .join("\n");
             let width = terminal.size()?.width as usize - 1;
             logs = log_text.lines().flat_map(|s| cut_line(s, width)).collect();
             dirty = true;

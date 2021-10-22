@@ -79,6 +79,8 @@ pub(crate) async fn run<B: Backend>(
                     termion::event::Key::Char('\n') => match table_state.selected() {
                         Some(row) if row < jobs.len() => {
                             crate::job_trace::run(terminal, client, key_rx, &jobs[row]).await?;
+                            // Reset colors from printing job trace
+                            print!("{}", termion::style::Reset);
                         }
                         _ => (),
                     },
